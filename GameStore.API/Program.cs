@@ -5,7 +5,7 @@ namespace GameStore.API
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +24,12 @@ namespace GameStore.API
             builder.Services.AddSwaggerGen();
 
             var app = builder.Build();
+
+            using (var scope = app.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<GameStoreDbContext>();
+                await DbInitializer.InitializeAsync(db);
+            }
 
             if (app.Environment.IsDevelopment())
             {
