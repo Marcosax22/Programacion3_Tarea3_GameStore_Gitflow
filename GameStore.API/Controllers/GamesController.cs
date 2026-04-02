@@ -1,10 +1,8 @@
 ﻿//Marcos Ariel 2024-1785
 using GameStore.API.Data;
 using GameStore.API.Models.Dtos;
-using GameStore.API.Models.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace GameStore.API.Controllers
 {
@@ -24,7 +22,11 @@ namespace GameStore.API.Controllers
         [HttpGet("List")]
         public async Task<ActionResult<IEnumerable<GameDto>>> GetAll()
         {
-            var entities = await _context.Games.ToListAsync();
+            var entities = await _context.Games
+                .AsNoTracking()
+                .OrderBy(g => g.Name)
+                .ToListAsync();
+
             var dtos = entities.Select(e => e.ToDto());
             return Ok(dtos);
         }
@@ -32,19 +34,26 @@ namespace GameStore.API.Controllers
         [HttpGet("Details/{id:int}")]
         public async Task<ActionResult<GameDto>> GetById(int id)
         {
-            var entity = await _context.Games.FindAsync(id);
-            if (entity == null) return NotFound();
+            var entity = await _context.Games
+                .AsNoTracking()
+                .FirstOrDefaultAsync(g => g.Id == id);
+
+            if (entity == null)
+                return NotFound(new { message = "Game not found." });
+
             return Ok(entity.ToDto());
         }
 
         [HttpPost("Create")]
         public async Task<ActionResult<GameDto>> Create([FromBody] GameCreateDto input)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
             var entity = input.ToEntity();
 
-            if (await _context.Games.AnyAsync(g => g.Name == entity.Name))
+            var exists = await _context.Games.AnyAsync(g => g.Name.ToLower() == entity.Name.ToLower());
+            if (exists)
                 return Conflict(new { message = "A game with the same name already exists." });
 
             _context.Games.Add(entity);
@@ -57,12 +66,15 @@ namespace GameStore.API.Controllers
         [HttpPut("Update/{id:int}")]
         public async Task<IActionResult> Update(int id, [FromBody] GameUpdateDto update)
         {
-            if (id != update.Id) return BadRequest(new { message = "Id in route and body do not match." });
+            if (id != update.Id)
+                return BadRequest(new { message = "Id in route and body do not match." });
 
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
-            var entity = await _context.Games.FindAsync(id);
-            if (entity == null) return NotFound();
+            var entity = await _context.Games.FirstOrDefaultAsync(g => g.Id == id);
+            if (entity == null)
+                return NotFound(new { message = "Game not found." });
 
             update.MapToEntity(entity);
 
@@ -73,9 +85,7 @@ namespace GameStore.API.Controllers
             catch (DbUpdateConcurrencyException ex)
             {
                 _logger.LogError(ex, "Concurrency error updating game {GameId}", id);
-                if (!await _context.Games.AnyAsync(g => g.id == id))
-                    return NotFound();
-                throw;
+                return StatusCode(500, new { message = "Unexpected concurrency error." });
             }
 
             return NoContent();
@@ -84,11 +94,13 @@ namespace GameStore.API.Controllers
         [HttpDelete("Delete/{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var entity = await _context.Games.FindAsync(id);
-            if (entity == null) return NotFound();
+            var entity = await _context.Games.FirstOrDefaultAsync(g => g.Id == id);
+            if (entity == null)
+                return NotFound(new { message = "Game not found." });
 
             _context.Games.Remove(entity);
             await _context.SaveChangesAsync();
+
             return NoContent();
         }
     }
