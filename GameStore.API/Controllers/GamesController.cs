@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace GameStore.API.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/games")]
     [ApiController]
     public class GamesController : ControllerBase
     {
@@ -20,6 +20,7 @@ namespace GameStore.API.Controllers
             _logger = logger;
         }
 
+        [HttpGet]
         [HttpGet("List")]
         public async Task<ActionResult<object>> GetAll([FromQuery] GameQueryDto query)
         {
@@ -61,6 +62,7 @@ namespace GameStore.API.Controllers
             });
         }
 
+        [HttpGet("{id:int}")]
         [HttpGet("Details/{id:int}")]
         public async Task<ActionResult<GameDto>> GetById(int id)
         {
@@ -74,6 +76,7 @@ namespace GameStore.API.Controllers
             return Ok(entity.ToDto());
         }
 
+        [HttpPost]
         [HttpPost("Create")]
         public async Task<ActionResult<GameDto>> Create([FromBody] GameCreateDto input)
         {
@@ -94,6 +97,7 @@ namespace GameStore.API.Controllers
             return CreatedAtAction(nameof(GetById), new { id = dto.Id }, dto);
         }
 
+        [HttpPut("{id:int}")]
         [HttpPut("Update/{id:int}")]
         public async Task<IActionResult> Update(int id, [FromBody] GameUpdateDto update)
         {
@@ -132,6 +136,7 @@ namespace GameStore.API.Controllers
             return NoContent();
         }
 
+        [HttpDelete("{id:int}")]
         [HttpDelete("Delete/{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
