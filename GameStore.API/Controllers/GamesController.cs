@@ -1,6 +1,7 @@
 ﻿//Marcos Ariel 2024-1785
 using GameStore.API.Data;
 using GameStore.API.Models.Dtos;
+using GameStore.API.Models.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,15 +21,44 @@ namespace GameStore.API.Controllers
         }
 
         [HttpGet("List")]
-        public async Task<ActionResult<IEnumerable<GameDto>>> GetAll()
+        public async Task<ActionResult<object>> GetAll([FromQuery] GameQueryDto query)
         {
-            var entities = await _context.Games
-                .AsNoTracking()
-                .OrderBy(g => g.Name)
+            IQueryable<Games> gamesQuery = _context.Games.AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(query.Search))
+            {
+                var search = query.Search.Trim().ToLower();
+                gamesQuery = gamesQuery.Where(g =>
+                    g.Name.ToLower().Contains(search) ||
+                    g.Description.ToLower().Contains(search));
+            }
+
+            if (query.MinPrice.HasValue)
+                gamesQuery = gamesQuery.Where(g => g.Price >= query.MinPrice.Value);
+
+            if (query.MaxPrice.HasValue)
+                gamesQuery = gamesQuery.Where(g => g.Price <= query.MaxPrice.Value);
+
+            gamesQuery = ApplySorting(gamesQuery, query.SortBy, query.SortDirection);
+
+            var page = query.Page < 1 ? 1 : query.Page;
+            var pageSize = query.PageSize < 1 ? 10 : Math.Min(query.PageSize, 100);
+
+            var totalRecords = await gamesQuery.CountAsync();
+
+            var items = await gamesQuery
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(g => g.ToDto())
                 .ToListAsync();
 
-            var dtos = entities.Select(e => e.ToDto());
-            return Ok(dtos);
+            return Ok(new
+            {
+                totalRecords,
+                page,
+                pageSize,
+                items
+            });
         }
 
         [HttpGet("Details/{id:int}")]
@@ -102,6 +132,20 @@ namespace GameStore.API.Controllers
             await _context.SaveChangesAsync();
 
             return NoContent();
+        }
+
+        private static IQueryable<Games> ApplySorting(IQueryable<Games> query, string? sortBy, string? sortDirection)
+        {
+            var sortByNormalized = sortBy?.Trim().ToLower() ?? "name";
+            var sortDirectionNormalized = sortDirection?.Trim().ToLower() ?? "asc";
+
+            return (sortByNormalized, sortDirectionNormalized) switch
+            {
+                ("price", "desc") => query.OrderByDescending(g => g.Price).ThenBy(g => g.Name),
+                ("price", "asc") => query.OrderBy(g => g.Price).ThenBy(g => g.Name),
+                ("name", "desc") => query.OrderByDescending(g => g.Name),
+                _ => query.OrderBy(g => g.Name)
+            };
         }
     }
 }
