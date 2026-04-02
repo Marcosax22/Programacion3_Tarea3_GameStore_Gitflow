@@ -81,6 +81,7 @@ namespace GameStore.API.Controllers
                 return BadRequest(ModelState);
 
             var entity = input.ToEntity();
+            entity.Name = NormalizeName(entity.Name);
 
             var exists = await _context.Games.AnyAsync(g => g.Name.ToLower() == entity.Name.ToLower());
             if (exists)
@@ -106,6 +107,16 @@ namespace GameStore.API.Controllers
             if (entity == null)
                 return NotFound(new { message = "Game not found." });
 
+            var normalizedName = NormalizeName(update.Name);
+
+            var duplicateExists = await _context.Games.AnyAsync(g =>
+                g.Id != id &&
+                g.Name.ToLower() == normalizedName.ToLower());
+
+            if (duplicateExists)
+                return Conflict(new { message = "Another game with the same name already exists." });
+
+            update.Name = normalizedName;
             update.MapToEntity(entity);
 
             try
@@ -146,6 +157,11 @@ namespace GameStore.API.Controllers
                 ("name", "desc") => query.OrderByDescending(g => g.Name),
                 _ => query.OrderBy(g => g.Name)
             };
+        }
+
+        private static string NormalizeName(string value)
+        {
+            return value.Trim();
         }
     }
 }

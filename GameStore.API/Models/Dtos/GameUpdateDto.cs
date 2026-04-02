@@ -8,14 +8,16 @@ namespace GameStore.API.Models.Dtos
         public int Id { get; set; }
 
         [Required]
+        [MinLength(2)]
         [MaxLength(50)]
-        public string Name { get; set; } = null!;
+        public string Name { get; set; } = string.Empty;
 
         [Required]
+        [MinLength(5)]
         [MaxLength(500)]
-        public string Description { get; set; } = null!;
+        public string Description { get; set; } = string.Empty;
 
-        [Range(0, 999999.99)]
+        [Range(0.01, 999999.99)]
         public decimal Price { get; set; }
     }
 }
