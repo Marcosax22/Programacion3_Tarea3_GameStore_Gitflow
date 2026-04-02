@@ -1,11 +1,5 @@
-using System;
 using GameStore.API.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 
 namespace GameStore.API
 {
@@ -15,16 +9,14 @@ namespace GameStore.API
         {
             var builder = WebApplication.CreateBuilder(args);
 
-           
             var connFromEnv = Environment.GetEnvironmentVariable("GAMESTORE_CONNECTION");
-            var connectionString = !string.IsNullOrEmpty(connFromEnv)
+            var connectionString = !string.IsNullOrWhiteSpace(connFromEnv)
                 ? connFromEnv
                 : builder.Configuration.GetConnectionString("DefaultConnection");
 
-           
-            builder.Services.AddDbContext<GameStoreDbContext>(o =>
+            builder.Services.AddDbContext<GameStoreDbContext>(options =>
             {
-                o.UseSqlServer(connectionString);
+                options.UseSqlite(connectionString);
             });
 
             builder.Services.AddControllers();
@@ -33,7 +25,6 @@ namespace GameStore.API
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
@@ -41,9 +32,7 @@ namespace GameStore.API
             }
 
             app.UseHttpsRedirection();
-
             app.UseAuthorization();
-
             app.MapControllers();
 
             app.Run();

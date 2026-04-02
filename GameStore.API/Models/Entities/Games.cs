@@ -1,19 +1,20 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace GameStore.API.Models.Entities
 {
     public class Games
     {
-        public int id { get; set; }
+        public int Id { get; set; }
 
+        [Required]
         [MaxLength(50, ErrorMessage = "The field {0} must have no more than {1} characters.")]
-        public string Name { get; set; } = null!;
-        [MaxLength(500, ErrorMessage = "The field {0} must have no more than {1} characters.")]
-        public string Description { get; set; } = null!;
+        public string Name { get; set; } = string.Empty;
 
-        [Column (TypeName = "decimal(18,2)")]
-        [DisplayFormat(DataFormatString = "{0:C2}")]
+        [Required]
+        [MaxLength(500, ErrorMessage = "The field {0} must have no more than {1} characters.")]
+        public string Description { get; set; } = string.Empty;
+
+        [Range(0.01, 999999.99)]
         public decimal Price { get; set; }
     }
 }
